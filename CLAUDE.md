@@ -4,91 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Flask-based web application that displays course information. The application uses a simple MVC-style architecture with Flask handling routing, view functions rendering templates, and a Course model managing course data.
+A Flask-based web application that displays course information. Uses a simple MVC-style architecture: Flask routing in `app.py`, view logic in `views.py`, and in-memory data in `models.py`.
 
-## Development Environment
-
-### Setup
+## Commands
 
 ```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
+# Setup (Unix/Mac)
+python -m venv venv && source venv/bin/activate && pip install -r requirements.txt
 
-# Unix/Mac
-python -m venv venv
-source venv/bin/activate
+# Run
+python src/app.py  # http://127.0.0.1:5000
 
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### Running the Application
-
-```bash
-python src/app.py
-```
-
-The application will be available at `http://127.0.0.1:5000`
-
-### Running Tests
-
-```bash
-# Run all tests
+# Tests
 python -m unittest discover -s tests
-
-# Run a specific test file
-python -m unittest tests.test_app
-
-# Run a specific test case
-python -m unittest tests.test_app.AppTestCase.test_index
+python -m unittest tests.test_app.AppTestCase.test_index  # single test
 ```
 
 ## Architecture
 
-### Application Structure
+**Route registration**: Routes use `app.add_url_rule()` in `app.py` rather than `@app.route()` decorators, keeping view functions in `views.py` decoupled from Flask.
 
-The application follows a modular Flask design:
+**Course lookup**: Course IDs in URLs are 1-indexed integers. `/course/1` maps to `courses[0]` in `models.py`. The view returns a 404 string response (not a rendered template) for out-of-range IDs.
 
-- **src/app.py**: Application entry point and Flask configuration. Routes are registered using `add_url_rule()` rather than decorators, which allows views to remain decoupled from Flask.
-- **src/views.py**: View functions that handle HTTP requests and return rendered templates. Views are pure functions that don't depend on Flask decorators.
-- **src/models.py**: Data models (currently in-memory Course objects stored in a list). No database backend - all course data is hardcoded.
-- **src/templates/**: Jinja2 HTML templates with inheritance structure (layout.html as base)
-- **src/static/css/**: CSS stylesheets for the application
+**Contact form** (`/contact`): Handles GET and POST. POST validates name, email (regex), and address (min 10 chars) server-side, returning the form with field-level errors on failure or a success flag on success. Form data is only logged to stdout — no email is sent.
 
-### Key Design Patterns
+**Template inheritance**: All templates extend `layout.html`, which provides the header nav and footer. Nav hardcodes `/course/1` as the "Course Details" link.
 
-1. **Separation of concerns**: Routes (app.py), view logic (views.py), and data (models.py) are separated into distinct modules.
-2. **Template inheritance**: Templates use Jinja2's extends/block pattern with layout.html as the base template.
-3. **Manual route registration**: Routes are registered with `add_url_rule()` instead of `@app.route()` decorators, allowing view functions to be imported and registered separately.
-
-### Data Model
-
-- Course data is stored in-memory as a list of Course objects in models.py
-- No database or persistence layer exists
-- To add new courses, modify the `courses` list in models.py
-
-## Important Notes
-
-- The views.py module imports only `render_template` from Flask, maintaining loose coupling
-- Course IDs in URLs are currently just passed to templates but not used to look up actual Course objects
-- The .env file contains Flask configuration (FLASK_APP and FLASK_ENV)
-- Virtual environment (venv/) should not be committed to version control
+**Test path setup**: `tests/test_app.py` uses `sys.path.insert` to add `src/` so that `from app import app` resolves correctly — tests must be run from the repo root.
 
 ## Development Workflow
 
-### Add Unit Tests
+After any change: add unit tests, run them to confirm they pass, then verify visually using the `ui-testing-agent` (or Playwright MCP at `http://127.0.0.1:5000`). Save screenshots to `test-output/` with descriptive names.
 
-- Whenever you add any changes add unit tests and run and make sure the tests passes.
-
-### Verify Changes with Playwright (MANDATORY)
-
-**After implementing any new feature, you MUST:**
-
-1. Start the Flask application (if not already running - `python src/app.py`)
-2. Use the Playwright MCP tool to connect to the application at `http://127.0.0.1:5000`
-3. Navigate to and interact with the new feature to verify it works correctly
-4. Take a screenshot of the working feature
-5. Save the screenshot in the `test-output/` folder with a descriptive filename (e.g., `feature-name-verification-YYYY-MM-DD.png`)
-
-This step ensures that all features are visually verified and provides documentation of the working state of the application.
+For UI/styling work, use the `/ui-designer` skill which has a project-specific design system at `.claude/skills/ui-designer/references/design-system.md`.
